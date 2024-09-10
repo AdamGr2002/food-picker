@@ -1,12 +1,17 @@
 import './globals.css'
+import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import { ClerkProvider } from '@clerk/nextjs'
+import dynamic from 'next/dynamic'
+
+const ClerkProviderWithChildren = dynamic(() => import('./components/ClerkProviderWithChildren'), {
+  ssr: false,
+})
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata = {
-  title: 'FoodPicker',
-  description: 'Discover and save your favorite recipes',
+export const metadata: Metadata = {
+  title: 'Food Picker',
+  description: 'An app to help you decide what to eat',
 }
 
 export default function RootLayout({
@@ -15,10 +20,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <ClerkProvider>
-      <html lang="en">
-        <body className={inter.className}>{children}</body>
-      </html>
-    </ClerkProvider>
+    <html lang="en">
+      <body className={inter.className}>
+        <ClerkProviderWithChildren>
+          {children}
+        </ClerkProviderWithChildren>
+      </body>
+    </html>
   )
 }

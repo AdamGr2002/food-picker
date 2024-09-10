@@ -7,40 +7,65 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Heart, X, Search, ChevronDown, ChevronUp, Share2, Info } from 'lucide-react'
 import { useSwipeable } from 'react-swipeable'
 import Confetti from 'react-confetti'
-import { FoodItem, Category, searchMeals, getNutritionInfo } from '../api'
-import FlavorProfileQuiz, { FlavorProfile } from './FlavorProfileQuiz'
-import { useFoodContext } from '../contexts/FoodContext'
+import { useRouter } from 'next/navigation'
+import { FoodItem, Category, searchMeals, getNutritionInfo, NutritionInfo } from '../api'
+import { FlavorProfile } from './FlavorProfileQuiz'
 
 type FoodPickerClientProps = {
+  foodItems: FoodItem[]
+  setFoodItems: React.Dispatch<React.SetStateAction<FoodItem[]>>
+  currentIndex: number
+  setCurrentIndex: React.Dispatch<React.SetStateAction<number>>
+  likedMeals: FoodItem[]
+  setLikedMeals: React.Dispatch<React.SetStateAction<FoodItem[]>>
+  nutritionInfo: NutritionInfo | null
+  setNutritionInfo: React.Dispatch<React.SetStateAction<NutritionInfo | null>>
   categories: Category[]
   mealOfTheDay: FoodItem
+  flavorProfile: FlavorProfile | null
 }
 
-export default function FoodPickerClient({ categories, mealOfTheDay }: FoodPickerClientProps) {
-  const { foodItems, setFoodItems, currentIndex, setCurrentIndex, likedMeals, setLikedMeals, nutritionInfo, setNutritionInfo } = useFoodContext()
+export default function FoodPickerClient({
+  foodItems,
+  setFoodItems,
+  currentIndex,
+  setCurrentIndex,
+  likedMeals,
+  setLikedMeals,
+  nutritionInfo,
+  setNutritionInfo,
+  categories,
+  mealOfTheDay,
+  flavorProfile
+}: FoodPickerClientProps) {
   const [direction, setDirection] = useState<string | null>(null)
   const [showDetails, setShowDetails] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [streak, setStreak] = useState(0)
   const [showConfetti, setShowConfetti] = useState(false)
-  const [flavorProfile, setFlavorProfile] = useState<FlavorProfile | null>(null)
-  const [showQuiz, setShowQuiz] = useState(true)
   const [showNutritionInfo, setShowNutritionInfo] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+
+  const router = useRouter()
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   const currentFood = foodItems[currentIndex]
 
   useEffect(() => {
-    if (flavorProfile) {
+    if (isClient) {
       filterFoodItems()
     }
-  }, [flavorProfile, searchQuery, selectedCategory])
+  }, [searchQuery, selectedCategory, flavorProfile, isClient])
 
   useEffect(() => {
-    if (currentFood) {
+    if (isClient && currentFood) {
       fetchNutritionInfo(currentFood.title)
     }
-  }, [currentFood])
+  }, [currentFood, isClient])
 
   const filterFoodItems = async () => {
     let filteredItems = foodItems
@@ -111,14 +136,8 @@ export default function FoodPickerClient({ categories, mealOfTheDay }: FoodPicke
     }
   }
 
-  const handleQuizComplete = (profile: FlavorProfile) => {
-    setFlavorProfile(profile)
-    setShowQuiz(false)
-    filterFoodItems()
-  }
-
-  if (showQuiz) {
-    return <FlavorProfileQuiz onComplete={handleQuizComplete} />
+  if (!isClient) {
+    return <div>Loading...</div>
   }
 
   return (

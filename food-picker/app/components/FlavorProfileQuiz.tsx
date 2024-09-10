@@ -15,55 +15,48 @@ type FlavorProfileQuizProps = {
 }
 
 export default function FlavorProfileQuiz({ onComplete }: FlavorProfileQuizProps) {
-  const [currentQuestion, setCurrentQuestion] = useState(0)
   const [profile, setProfile] = useState<FlavorProfile>({
     spicy: false,
     sweet: false,
     savory: false,
     exotic: false,
-    vegetarian: false
+    vegetarian: false,
   })
 
-  const questions = [
-    { question: "Do you prefer spicy food?", key: "spicy" },
-    { question: "Do you like sweet flavors?", key: "sweet" },
-    { question: "Are you a fan of savory dishes?", key: "savory" },
-    { question: "Do you enjoy exotic cuisines?", key: "exotic" },
-    { question: "Are you vegetarian or vegan?", key: "vegetarian" }
-  ]
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setProfile(prev => ({ ...prev, [e.target.name]: e.target.checked }))
+  }
 
-  const handleAnswer = (answer: boolean) => {
-    const newProfile = { ...profile, [questions[currentQuestion].key]: answer }
-    setProfile(newProfile)
-
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1)
-    } else {
-      onComplete(newProfile)
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onComplete(profile)
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md max-w-md mx-auto">
+    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-4">Flavor Profile Quiz</h2>
-      <p className="mb-4">{questions[currentQuestion].question}</p>
-      <div className="flex space-x-4">
+      <form onSubmit={handleSubmit}>
+        {Object.entries(profile).map(([key, value]) => (
+          <div key={key} className="mb-4">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                name={key}
+                checked={value}
+                onChange={handleChange}
+                className="mr-2"
+              />
+              <span className="capitalize">{key}</span>
+            </label>
+          </div>
+        ))}
         <button
-          onClick={() => handleAnswer(true)}
-          className="flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+          type="submit"
+          className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
         >
-          Yes
+          Complete Quiz
         </button>
-        <button
-          onClick={() => handleAnswer(false)}
-          className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-        >
-          No
-        </button>
-      </div>
-      <div className="mt-4 text-sm text-gray-600">
-        Question {currentQuestion + 1} of {questions.length}
-      </div>
+      </form>
     </div>
   )
 }
