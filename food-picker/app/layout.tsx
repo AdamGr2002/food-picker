@@ -3,9 +3,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import dynamic from 'next/dynamic'
 
-const ClerkProviderWithChildren = dynamic(() => import('./components/ClerkProviderWithChildren'), {
-  ssr: false,
-})
+const ClerkProviderWithChildren = dynamic(() => import('./components/ClerkProviderWithChildren'), { ssr: false })
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -22,9 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ClerkProviderWithChildren>
-          {children}
-        </ClerkProviderWithChildren>
+        <ClerkProviderWithChildren>{children}</ClerkProviderWithChildren>
       </body>
     </html>
   )

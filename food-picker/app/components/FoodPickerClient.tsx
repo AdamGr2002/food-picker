@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Heart, X, Search, ChevronDown, ChevronUp, Share2, Info } from 'lucide-react'
 import { useSwipeable } from 'react-swipeable'
@@ -23,6 +23,7 @@ type FoodPickerClientProps = {
   categories: Category[]
   mealOfTheDay: FoodItem
   flavorProfile: FlavorProfile | null
+  fetchMoreMeals: () => Promise<void>
 }
 
 export default function FoodPickerClient({
@@ -36,7 +37,8 @@ export default function FoodPickerClient({
   setNutritionInfo,
   categories,
   mealOfTheDay,
-  flavorProfile
+  flavorProfile,
+  fetchMoreMeals
 }: FoodPickerClientProps) {
   const [direction, setDirection] = useState<string | null>(null)
   const [showDetails, setShowDetails] = useState(false)
@@ -53,7 +55,23 @@ export default function FoodPickerClient({
     setIsClient(true)
   }, [])
 
-  const currentFood = foodItems[currentIndex]
+  useEffect(() => {
+    console.log('FoodPickerClient - Food Items:', foodItems)
+  }, [foodItems])
+
+  // Filter food items based on search query and selected category
+  const filteredFoodItems = useMemo(() => {
+    return foodItems.filter(item => {
+      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = selectedCategory === '' || item.category === selectedCategory
+      return matchesSearch && matchesCategory
+    })
+  }, [foodItems, searchQuery, selectedCategory])
+
+  const currentFood = filteredFoodItems[currentIndex]
+
+  // Add this log to check the current food item
+  console.log('Current Food:', currentFood)
 
   useEffect(() => {
     if (isClient) {
@@ -98,9 +116,9 @@ export default function FoodPickerClient({
     setNutritionInfo(info)
   }
 
-  const handleSwipe = (swipeDirection: 'left' | 'right') => {
+  const handleSwipe = async (swipeDirection: 'left' | 'right') => {
     setDirection(swipeDirection)
-    setTimeout(() => {
+    setTimeout(async () => {
       if (swipeDirection === 'right') {
         setLikedMeals(prev => [...prev, currentFood])
         setStreak(prev => prev + 1)
@@ -109,7 +127,14 @@ export default function FoodPickerClient({
       } else {
         setStreak(0)
       }
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % foodItems.length)
+      
+      let nextIndex = (currentIndex + 1) % foodItems.length
+      if (nextIndex === 0 || nextIndex >= foodItems.length - 5) {
+        await fetchMoreMeals()
+        nextIndex = currentIndex + 1
+      }
+      
+      setCurrentIndex(nextIndex)
       setDirection(null)
     }, 300)
   }
@@ -132,8 +157,16 @@ export default function FoodPickerClient({
         url: shareUrl,
       })
     } else {
-      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank')
+      window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank')
     }
+  }
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+  }
+
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedCategory(e.target.value)
   }
 
   if (!isClient) {
@@ -141,21 +174,21 @@ export default function FoodPickerClient({
   }
 
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full max-w-md bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
       <div className="mb-4">
         <input
           type="text"
           placeholder="Search meals..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full p-2 border rounded"
+          onChange={handleSearch}
+          className="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
         />
       </div>
       <div className="mb-4">
         <select
           value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="w-full p-2 border rounded"
+          onChange={handleCategoryChange}
+          className="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
         >
           <option value="">All Categories</option>
           {categories.map(category => (
@@ -163,39 +196,49 @@ export default function FoodPickerClient({
           ))}
         </select>
       </div>
-      <div className="mb-4 p-4 bg-yellow-100 rounded-lg">
-        <h3 className="text-xl font-semibold mb-2">Meal of the Day Challenge</h3>
-        <p>Try making: <strong>{mealOfTheDay.title}</strong></p>
+      <div className="mb-4 p-4 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+        <h3 className="text-xl font-semibold mb-2 text-yellow-800 dark:text-yellow-200">Meal of the Day Challenge</h3>
+        <p className="text-yellow-900 dark:text-yellow-100">Try making: <strong>{mealOfTheDay.title}</strong></p>
       </div>
-      <div className="relative w-full h-96" {...swipeHandlers}>
-        <AnimatePresence>
-          {currentFood && (
-            <motion.div
-              key={currentFood.id}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{
-                x: direction === 'left' ? -300 : direction === 'right' ? 300 : 0,
-                opacity: 0,
-              }}
-              transition={{ duration: 0.3 }}
-              className="absolute w-full h-full"
-            >
-              <div className="w-full h-full rounded-2xl overflow-hidden shadow-xl">
-                <img
-                  src={currentFood.image}
-                  alt={currentFood.title}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
-                  <h2 className="text-white text-2xl font-semibold">{currentFood.title}</h2>
-                  <p className="text-white">{currentFood.category} - {currentFood.area}</p>
+      {foodItems.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-xl font-semibold">Loading meals...</p>
+        </div>
+      ) : filteredFoodItems.length > 0 ? (
+        <div className="relative w-full h-96 mb-4" {...swipeHandlers}>
+          <AnimatePresence>
+            {currentFood && (
+              <motion.div
+                key={currentFood.id}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{
+                  x: direction === 'left' ? -300 : direction === 'right' ? 300 : 0,
+                  opacity: 0,
+                }}
+                transition={{ duration: 0.3 }}
+                className="absolute w-full h-full"
+              >
+                <div className="w-full h-full rounded-2xl overflow-hidden shadow-xl">
+                  <img
+                    src={currentFood.image || '/placeholder-image.jpg'}
+                    alt={currentFood.title || 'Food Item'}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
+                    <h2 className="text-white text-2xl font-semibold">{currentFood.title || 'Unnamed Food'}</h2>
+                    <p className="text-white">{currentFood.category || 'Uncategorized'} - {currentFood.area || 'Unknown Origin'}</p>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <p className="text-xl font-semibold">No meals found. Try adjusting your search or filters.</p>
+        </div>
+      )}
       <div className="flex justify-center mt-4 space-x-4">
         <button
           onClick={() => handleSwipe('left')}
@@ -237,7 +280,7 @@ export default function FoodPickerClient({
         {showDetails ? <ChevronUp className="inline ml-2" /> : <ChevronDown className="inline ml-2" />}
       </button>
       {showDetails && currentFood && (
-        <div className="mt-4 p-4 bg-white rounded shadow">
+        <div className="mt-4 p-4 bg-white rounded shadow text-black">
           <h3 className="text-xl font-semibold mb-2">Ingredients:</h3>
           <ul className="list-disc pl-5 mb-4">
             {currentFood.ingredients.map((ingredient, index) => (
@@ -249,7 +292,7 @@ export default function FoodPickerClient({
         </div>
       )}
       {showNutritionInfo && nutritionInfo && (
-        <div className="mt-4 p-4 bg-white rounded shadow">
+        <div className="mt-4 p-4 bg-white rounded shadow text-black">
           <h3 className="text-xl font-semibold mb-2">Nutrition Information (per 100g):</h3>
           <ul className="list-disc pl-5 mb-4">
             <li>Calories: {nutritionInfo.calories.toFixed(2)} kcal</li>
@@ -266,12 +309,16 @@ export default function FoodPickerClient({
         </div>
       )}
       <div className="mt-8">
-        <h3 className="text-2xl font-semibold mb-4">Liked Meals</h3>
+        <h2 className="text-2xl font-bold mb-4">Liked Meals</h2>
         <div className="grid grid-cols-2 gap-4">
           {likedMeals.map((meal) => (
-            <div key={meal.id} className="bg-white rounded shadow p-2">
-              <img src={meal.image} alt={meal.title} className="w-full h-32 object-cover rounded" />
-              <p className="mt-2 text-center font-medium">{meal.title}</p>
+            <div key={meal.id} className="bg-white rounded shadow p-2 text-black">
+              <img 
+                src={meal.image || '/placeholder-image.jpg'} 
+                alt={meal.title || 'Meal'} 
+                className="w-full h-32 object-cover rounded" 
+              />
+              <p className="mt-2 text-center font-medium">{meal.title || 'Unnamed Meal'}</p>
             </div>
           ))}
         </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { SignIn } from '@clerk/nextjs/'
+import { SignIn } from '@clerk/nextjs'
 import { motion } from 'framer-motion'
 import { Utensils } from 'lucide-react'
 
